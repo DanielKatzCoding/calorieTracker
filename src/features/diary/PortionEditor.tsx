@@ -7,6 +7,8 @@ import { NumberField } from '@/components/NumberField';
 import { logFood, logRecipe } from '@/services/logging';
 import { SLOT_LABEL } from '@/domain/menu/slots';
 import { fmt } from '@/lib/labels';
+import { useFoods } from '@/hooks/useFoods';
+import { IngredientList, StepList } from '@/features/menu/RecipeDetails';
 
 export type Addable = { kind: 'food'; food: FoodItem; grams?: number } | { kind: 'recipe'; recipe: ResolvedRecipe; scale: number };
 
@@ -14,6 +16,7 @@ export function PortionEditor({ item, slot, dateKey, onBack, onDone }: { item: A
   const [grams, setGrams] = useState<number | null>(item.kind === 'food' ? item.grams ?? item.food.servingG ?? 100 : null);
   const [scale, setScale] = useState(item.kind === 'recipe' ? item.scale : 1);
   const [busy, setBusy] = useState(false);
+  const { foodsById } = useFoods();
 
   const macros: Macros = roundMacros(item.kind === 'food' ? macrosForGrams(item.food, grams ?? 0) : scaleMacros(item.recipe.macros, scale));
   const name = item.kind === 'food' ? item.food.name : item.recipe.name;
@@ -64,14 +67,15 @@ export function PortionEditor({ item, slot, dateKey, onBack, onDone }: { item: A
           </p>
           <details className="mt-3 text-sm">
             <summary className="cursor-pointer text-accent">Ingredients</summary>
-            <ul className="mt-2 space-y-1 text-muted">
-              {item.recipe.ingredients.map((i) => (
-                <li key={i.foodId} className="flex justify-between">
-                  <span>{i.foodId.replace(/_/g, ' ')}</span>
-                  <span>{Math.round(i.grams * scale)} g</span>
-                </li>
-              ))}
-            </ul>
+            <div className="mt-1">
+              <IngredientList recipe={item.recipe} scale={scale} foodsById={foodsById} />
+            </div>
+          </details>
+          <details className="mt-2 text-sm">
+            <summary className="cursor-pointer text-accent">Preparation ({item.recipe.steps.length} steps · {item.recipe.prepMinutes} min)</summary>
+            <div className="mt-2">
+              <StepList recipe={item.recipe} />
+            </div>
           </details>
         </>
       )}

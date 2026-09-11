@@ -48,6 +48,7 @@ describe('resolveRecipe', () => {
       { foodId: 'rice', grams: 200 },
     ],
     prepMinutes: 20,
+    steps: ['Cook.', 'Serve.'],
   };
 
   it('sums macros and grams from ingredients', () => {

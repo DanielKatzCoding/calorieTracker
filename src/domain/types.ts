@@ -117,7 +117,9 @@ export interface Recipe {
   /** Allergens not derivable from the ingredient list (e.g. cross-contamination). */
   extraAllergens?: Allergen[];
   prepMinutes: number;
-  instructions?: string;
+  /** Ordered preparation steps, imperative, one sentence each. */
+  steps: string[];
+  tip?: string;
 }
 
 /** Recipe plus nutrition derived from its ingredients. */

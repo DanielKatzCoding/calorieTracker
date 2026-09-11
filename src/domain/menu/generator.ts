@@ -176,8 +176,20 @@ export function simplePlate(target: SlotTarget, input: MenuInput, rng: Rng): Res
   }
 
   const foodsById = indexById(input.foods);
+  const short = (f: FoodItem) => f.name.split(',')[0]!.toLowerCase();
   const names = ingredients.map((i) => foodsById.get(i.foodId)!.name.split(',')[0]);
   const id = `simple:${target.slot}:${hashString(ingredients.map((i) => `${i.foodId}${i.grams}`).join('|'))}`;
+  const usedCarb = carb && ingredients.some((i) => i.foodId === carb.id);
+  const usedFat = fat && ingredients.some((i) => i.foodId === fat.id);
+  const steps: string[] = [];
+  if (usedCarb) steps.push(`Cook the ${short(carb)} according to the package and keep warm.`);
+  steps.push(
+    protein.category === 'dairy'
+      ? `Serve the ${short(protein)} as it is, seasoned with pepper or herbs.`
+      : `Season the ${short(protein)} with salt, pepper and your favourite spices; grill, pan-fry or bake until cooked through.`,
+  );
+  if (veg) steps.push(`Steam, roast or pan-fry the ${short(veg)} until just tender.`);
+  steps.push(usedFat ? `Plate everything and finish with the ${short(fat)}.` : 'Plate everything and season to taste.');
   return resolveRecipe(
     {
       id,
@@ -186,7 +198,8 @@ export function simplePlate(target: SlotTarget, input: MenuInput, rng: Rng): Res
       cuisine: 'neutral',
       ingredients,
       prepMinutes: 20,
-      instructions: 'Cook the protein and vegetables simply (grill, pan-fry or steam) and season to taste.',
+      steps,
+      tip: 'Built from single foods because no saved recipe fits your preferences for this meal.',
     },
     foodsById,
   );

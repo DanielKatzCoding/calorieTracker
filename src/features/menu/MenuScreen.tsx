@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import type { DailyMenu, MenuWarning, PlannedMeal } from '@/domain/types';
+import { Link } from 'react-router';
+import type { DailyMenu, MenuWarning, PlannedMeal, ResolvedRecipe } from '@/domain/types';
 import { useReadyProfile } from '@/hooks/useReadyProfile';
 import { useMenu } from '@/hooks/useMenu';
 import { useDay } from '@/hooks/useDay';
 import { useToast } from '@/hooks/useToast';
-import { RESOLVED_RECIPES_BY_ID, useFoods } from '@/hooks/useFoods';
+import { RESOLVED_RECIPES_BY_ID } from '@/hooks/useFoods';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { SegmentedControl } from '@/components/SegmentedControl';
@@ -14,7 +15,9 @@ import { fmt } from '@/lib/labels';
 import { SLOT_LABEL } from '@/domain/menu/slots';
 import { regenerateMenu, swapMenuMeal } from '@/services/planning';
 import { logPlannedMeal } from '@/services/logging';
-import { Link } from 'react-router';
+import { RecipeSheet } from './RecipeSheet';
+
+const recipeOf = (m: PlannedMeal): ResolvedRecipe | undefined => m.inlineRecipe ?? RESOLVED_RECIPES_BY_ID.get(m.recipeId);
 
 export function MenuScreen() {
   const { profile, targets } = useReadyProfile();
@@ -25,6 +28,7 @@ export function MenuScreen() {
   const toast = useToast();
   const [busy, setBusy] = useState<number | 'all' | null>(null);
   const [rejected, setRejected] = useState<Record<number, string[]>>({});
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   const logged = new Set(day.entries.flatMap((e) => (e.source.kind === 'recipe' ? [e.source.recipeId] : [])));
 
@@ -42,6 +46,14 @@ export function MenuScreen() {
     setRejected((r) => ({ ...r, [idx]: rej }));
     setBusy(null);
   };
+  const log = async (m: PlannedMeal) => {
+    const r = recipeOf(m);
+    if (!r) return;
+    await logPlannedMeal(dateKey, m, r);
+    toast.show(`Logged ${r.name}`, { tone: 'success' });
+  };
+
+  const openMeal = openIndex !== null ? menu?.meals[openIndex] ?? null : null;
 
   return (
     <div className="px-4 pb-8 pt-3">
@@ -58,22 +70,38 @@ export function MenuScreen() {
         </div>
       ) : (
         <>
-          <Card className="flex items-center justify-between text-sm">
-            <div>
-              <div className="text-muted">Planned</div>
-              <div className="text-lg font-semibold">
-                {Math.round(menu.totals.kcal)} <span className="text-sm font-normal text-muted">/ {targets.kcal} kcal</span>
-              </div>
-            </div>
-            <div className="text-right text-xs text-muted">
+          <Card padded={false}>
+            <div className="flex items-center justify-between p-4 text-sm">
               <div>
-                <span className="text-protein">P {Math.round(menu.totals.proteinG)}</span> · <span className="text-carbs">C {Math.round(menu.totals.carbsG)}</span> ·{' '}
-                <span className="text-fat">F {Math.round(menu.totals.fatG)}</span>
+                <div className="text-muted">Planned</div>
+                <div className="text-lg font-semibold">
+                  {Math.round(menu.totals.kcal)} <span className="text-sm font-normal text-muted">/ {targets.kcal} kcal</span>
+                </div>
               </div>
-              <div className="mt-0.5">
-                target P {targets.proteinG} · C {targets.carbsG} · F {targets.fatG}
+              <div className="text-right text-xs text-muted">
+                <div>
+                  <span className="text-protein">P {Math.round(menu.totals.proteinG)}</span> · <span className="text-carbs">C {Math.round(menu.totals.carbsG)}</span> ·{' '}
+                  <span className="text-fat">F {Math.round(menu.totals.fatG)}</span>
+                </div>
+                <div className="mt-0.5">
+                  target P {targets.proteinG} · C {targets.carbsG} · F {targets.fatG}
+                </div>
               </div>
             </div>
+            <ul className="border-t border-border/60 px-4 py-2">
+              {menu.meals.map((m, idx) => {
+                const r = recipeOf(m);
+                return (
+                  <li key={`${m.recipeId}-${idx}`}>
+                    <button type="button" className="flex w-full items-baseline gap-3 py-1.5 text-left text-sm" onClick={() => setOpenIndex(idx)}>
+                      <span className="w-20 shrink-0 text-xs uppercase tracking-wide text-muted">{SLOT_LABEL[m.slot]}</span>
+                      <span className="min-w-0 flex-1 truncate">{r?.name ?? m.recipeId}</span>
+                      <span className="shrink-0 text-muted">{Math.round(m.macros.kcal)}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
           </Card>
 
           <Warnings warnings={menu.warnings} />
@@ -85,13 +113,9 @@ export function MenuScreen() {
                 meal={m}
                 logged={logged.has(m.recipeId)}
                 busy={busy === idx || busy === 'all'}
+                onOpen={() => setOpenIndex(idx)}
                 onSwap={() => swap(menu, idx)}
-                onLog={async () => {
-                  const r = m.inlineRecipe ?? RESOLVED_RECIPES_BY_ID.get(m.recipeId);
-                  if (!r) return;
-                  await logPlannedMeal(dateKey, m, r);
-                  toast.show(`Logged ${r.name}`, { tone: 'success' });
-                }}
+                onLog={() => log(m)}
               />
             ))}
           </div>
@@ -105,46 +129,52 @@ export function MenuScreen() {
               Change preferences
             </Link>
           </p>
+
+          <RecipeSheet
+            meal={openMeal}
+            recipe={openMeal ? recipeOf(openMeal) ?? null : null}
+            logged={openMeal ? logged.has(openMeal.recipeId) : false}
+            busy={busy !== null}
+            onClose={() => setOpenIndex(null)}
+            onLog={async () => {
+              if (openMeal) await log(openMeal);
+              setOpenIndex(null);
+            }}
+            onSwap={async () => {
+              if (openIndex !== null) await swap(menu, openIndex);
+              setOpenIndex(null);
+            }}
+          />
         </>
       )}
     </div>
   );
 }
 
-function MealCard({ meal, logged, busy, onSwap, onLog }: { meal: PlannedMeal; logged: boolean; busy: boolean; onSwap: () => void; onLog: () => void }) {
-  const { foodsById } = useFoods();
-  const [open, setOpen] = useState(false);
-  const r = meal.inlineRecipe ?? RESOLVED_RECIPES_BY_ID.get(meal.recipeId);
+function MealCard({ meal, logged, busy, onOpen, onSwap, onLog }: { meal: PlannedMeal; logged: boolean; busy: boolean; onOpen: () => void; onSwap: () => void; onLog: () => void }) {
+  const r = recipeOf(meal);
   if (!r) return null;
   return (
     <Card padded={false}>
-      <button type="button" className="w-full p-4 text-left" onClick={() => setOpen((o) => !o)}>
+      <button type="button" className="w-full p-4 text-left active:bg-surface-2" onClick={onOpen}>
         <div className="flex items-baseline justify-between">
           <span className="text-xs uppercase tracking-wide text-muted">{SLOT_LABEL[meal.slot]}</span>
           <span className="text-xs text-muted">
-            {meal.scale !== 1 && `${meal.scale}× portion · `}
-            {r.prepMinutes} min
+            {meal.scale !== 1 && `${meal.scale}× serving · `}⏱ {r.prepMinutes} min
           </span>
         </div>
-        <div className="mt-1 text-base font-semibold">{r.name}</div>
+        <div className="mt-1 flex items-center justify-between gap-2">
+          <div className="text-base font-semibold">{r.name}</div>
+          <span className="text-muted">›</span>
+        </div>
         <div className="mt-1 text-sm text-muted">
           <span className="font-medium text-text">{fmt.kcal(meal.macros.kcal)}</span> · <span className="text-protein">P {Math.round(meal.macros.proteinG)}</span> ·{' '}
           <span className="text-carbs">C {Math.round(meal.macros.carbsG)}</span> · <span className="text-fat">F {Math.round(meal.macros.fatG)}</span>
         </div>
-      </button>
-      {open && (
-        <div className="border-t border-border/60 px-4 pb-3 pt-2 text-sm">
-          <ul className="space-y-1">
-            {r.ingredients.map((i) => (
-              <li key={i.foodId} className="flex justify-between text-muted">
-                <span>{foodsById.get(i.foodId)?.name ?? i.foodId}</span>
-                <span>{Math.round(i.grams * meal.scale)} g</span>
-              </li>
-            ))}
-          </ul>
-          {r.instructions && <p className="mt-3 text-muted">{r.instructions}</p>}
+        <div className="mt-1 text-xs text-muted">
+          {r.ingredients.length} ingredients · {r.steps.length} steps · tap for recipe
         </div>
-      )}
+      </button>
       <div className="flex gap-2 border-t border-border/60 p-2">
         <Button variant="ghost" size="sm" className="flex-1" onClick={onSwap} disabled={busy}>
           {busy ? '…' : '↻ Swap'}

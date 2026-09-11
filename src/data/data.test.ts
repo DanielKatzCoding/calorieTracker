@@ -56,6 +56,20 @@ describe('recipes', () => {
     for (const r of RECIPES) for (const ing of r.ingredients) expect(FOODS_BY_ID.has(ing.foodId), `${r.id} -> ${ing.foodId}`).toBe(true);
   });
 
+  it('every recipe has clear preparation steps', () => {
+    for (const r of RECIPES) {
+      expect(r.steps.length, `${r.id} steps`).toBeGreaterThanOrEqual(2);
+      expect(r.steps.length, `${r.id} steps`).toBeLessThanOrEqual(6);
+      for (const s of r.steps) {
+        expect(s.length, `${r.id}: "${s}"`).toBeGreaterThanOrEqual(8);
+        expect(s.length, `${r.id}: "${s}"`).toBeLessThanOrEqual(200);
+        expect(s.trim().endsWith('.'), `${r.id}: "${s}" should end with a period`).toBe(true);
+        expect(/\d+\s?g\b/.test(s), `${r.id}: "${s}" must not hard-code grams`).toBe(false);
+      }
+      expect(r.prepMinutes, r.id).toBeGreaterThan(0);
+    }
+  });
+
   it('base servings have sensible energy', () => {
     for (const r of resolved) {
       const isSnackOnly = r.slots.length === 1 && r.slots[0] === 'snack';

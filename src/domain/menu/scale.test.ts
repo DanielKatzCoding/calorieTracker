@@ -9,6 +9,7 @@ const mk = (id: string, kcal: number, proteinG: number): ResolvedRecipe => ({
   cuisine: 'neutral',
   ingredients: [],
   prepMinutes: 1,
+  steps: ['Cook.', 'Serve.'],
   macros: { kcal, proteinG, carbsG: 10, fatG: 10 },
   totalGrams: 300,
   allergens: [],

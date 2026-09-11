@@ -102,6 +102,8 @@ describe('fallback ladder', () => {
     const dinner = menu.meals.find((m) => m.slot === 'dinner');
     expect(dinner?.inlineRecipe).toBeDefined();
     expect(dinner!.inlineRecipe!.ingredients.length).toBeGreaterThanOrEqual(2);
+    expect(dinner!.inlineRecipe!.steps.length).toBeGreaterThanOrEqual(2);
+    expect(dinner!.inlineRecipe!.steps.join(' ')).toMatch(/season|cook|steam|roast|serve/i);
     expect(matchesConstraints(dinner!.inlineRecipe!, p.profile)).toBe(true);
     expect(menu.warnings.filter((w) => w.code === 'FALLBACK_SIMPLE_PLATE')).toHaveLength(2);
   });

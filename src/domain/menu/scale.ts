@@ -25,12 +25,20 @@ export function bestScale(recipeKcal: number, targetKcal: number): number {
 }
 
 export const PROTEIN_WEIGHT = 0.5;
+export const PROTEIN_EXCESS_WEIGHT = 0.15;
+/** Protein above this multiple of the slot target starts to cost (keeps carbs/fat balanced). */
+export const PROTEIN_EXCESS_FROM = 1.5;
 
-/** Lower is better: relative kcal miss plus a penalty for falling short of the slot's protein. */
+/**
+ * Lower is better: relative kcal miss, a penalty for falling short of the slot's protein,
+ * and a softer penalty for wildly overshooting it (which crowds out carbs and fat).
+ */
 export function mealCost(macros: Macros, targetKcal: number, targetProteinG: number): number {
   const kcalErr = Math.abs(macros.kcal - targetKcal) / targetKcal;
-  const proteinShort = Math.max(0, targetProteinG - macros.proteinG) / Math.max(targetProteinG, 1);
-  return kcalErr + PROTEIN_WEIGHT * proteinShort;
+  const t = Math.max(targetProteinG, 1);
+  const proteinShort = Math.max(0, targetProteinG - macros.proteinG) / t;
+  const proteinExcess = Math.max(0, macros.proteinG - targetProteinG * PROTEIN_EXCESS_FROM) / t;
+  return kcalErr + PROTEIN_WEIGHT * proteinShort + PROTEIN_EXCESS_WEIGHT * proteinExcess;
 }
 
 export interface ScaledChoice {

@@ -33,7 +33,7 @@ export function SettingsScreen() {
           <Row k="Activity" v={label(ACTIVITY_OPTIONS, profile.activity)} />
           <Row k="Diet" v={label(DIET_OPTIONS, profile.diet)} />
           <Row k="Avoids" v={profile.allergens.length ? profile.allergens.map((a) => label(ALLERGEN_OPTIONS, a)).join(', ') : 'nothing'} />
-          <Row k="Dislikes" v={profile.dislikedFoodIds.length ? `${profile.dislikedFoodIds.length} foods` : 'none'} />
+          <Row k="Dislikes" v={profile.dislikedFoodIds.length ? `${profile.dislikedFoodIds.length} food${profile.dislikedFoodIds.length === 1 ? '' : 's'}` : 'none'} />
           <Row k="Meals / day" v={String(profile.mealsPerDay)} />
           <Row k="Training" v={`${profile.training.daysPerWeek}×/wk · ${label(EQUIPMENT_OPTIONS, profile.training.equipment)} · ${label(LEVEL_OPTIONS, profile.training.level)}`} />
         </dl>

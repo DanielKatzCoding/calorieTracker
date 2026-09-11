@@ -38,6 +38,13 @@ describe('mealCost', () => {
     expect(noShort).toBeCloseTo(0.1);
     expect(short).toBeCloseTo(0.1 + 0.5 * 0.5);
   });
+  it('softly penalises large protein overshoot but not moderate surplus', () => {
+    const moderate = mealCost({ kcal: 500, proteinG: 44, carbsG: 0, fatG: 0 }, 500, 30); // 1.47x
+    const huge = mealCost({ kcal: 500, proteinG: 75, carbsG: 0, fatG: 0 }, 500, 30); // 2.5x
+    expect(moderate).toBe(0);
+    expect(huge).toBeCloseTo(0.15 * ((75 - 45) / 30));
+    expect(huge).toBeLessThan(mealCost({ kcal: 500, proteinG: 15, carbsG: 0, fatG: 0 }, 500, 30));
+  });
 });
 
 describe('chooseMeal', () => {

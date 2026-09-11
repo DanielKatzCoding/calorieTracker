@@ -9,6 +9,7 @@ const base = process.env.VITE_BASE ?? '/calorieTracker/';
 
 export default defineConfig({
   base,
+  build: { chunkSizeWarningLimit: 900 },
   resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
   plugins: [
     react(),

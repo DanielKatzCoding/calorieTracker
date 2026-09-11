@@ -201,14 +201,18 @@ export interface Exercise {
   met: number;
   unilateral?: boolean;
   bodyweight?: boolean;
+  /** Holds and carries are prescribed in seconds rather than reps. */
+  timed?: boolean;
 }
 
 export interface Prescription {
   exerciseId: string;
   sets: number;
+  /** Reps, or seconds when `timed`. */
   repMin: number;
   repMax: number;
   restSec: number;
+  timed?: boolean;
 }
 
 export interface WorkoutDay {
